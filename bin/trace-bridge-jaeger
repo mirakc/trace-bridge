@@ -1,0 +1,75 @@
+#!/usr/bin/env node
+
+"use strict";
+
+const program = require('commander');
+const readline = require('readline');
+
+const { BasicTracerProvider } = require('@opentelemetry/tracing');
+const { ConsoleSpanExporter } = require('@opentelemetry/tracing');
+const { SimpleSpanProcessor } = require('@opentelemetry/tracing');
+const { JaegerExporter } = require('@opentelemetry/exporter-jaeger');
+
+const { TraceBridge } = require('../');
+
+const HELP = `
+DESCRIPTION:
+  This command bridges tracing data from mirakc to Jaeger.
+
+NOTES:
+  The time resolution in Jaeger is different for spans and logs.
+
+    Spans .. in mircoseconds
+    Logs  .. in milliseconds
+
+  opentelemetry-js rounds a HrTime to these values  and that causes
+  negative durations.  See the following functions in @opentelemetry/core:
+
+  * hrTimeToMilliseconds
+  * hrTimeToMicroseconds
+`;
+
+program
+  .description("Bridge tracing data to Jaeger")
+  .option('-d, --debug')
+  .on('--help', () => console.log(HELP))
+  .action(bridge)
+  .parse(process.argv);
+
+function bridge(options) {
+  const tracer = init(options);
+
+  let bridge = new TraceBridge;
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    terminal: false,
+  });
+
+  rl.on('line', (line) => {
+    const trace = JSON.parse(line);
+    bridge.process(trace);
+  });
+}
+
+function init(options) {
+  const exporter = new JaegerExporter({
+    serviceName: 'mirakc',
+  });
+
+  const provider = new BasicTracerProvider({
+    traceParams: {
+      numberOfEventsPerSpan: Number.MAX_SAFE_INTEGER
+    }
+  });
+
+  provider.addSpanProcessor(new SimpleSpanProcessor(exporter));
+
+  if (options.debug) {
+    provider.addSpanProcessor(
+      new SimpleSpanProcessor(new ConsoleSpanExporter()));
+  }
+
+  provider.register();
+}

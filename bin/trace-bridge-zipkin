@@ -1,0 +1,72 @@
+#!/usr/bin/env node
+
+"use strict";
+
+const program = require('commander');
+const readline = require('readline');
+
+const { BasicTracerProvider } = require('@opentelemetry/tracing');
+const { ConsoleSpanExporter } = require('@opentelemetry/tracing');
+const { SimpleSpanProcessor } = require('@opentelemetry/tracing');
+const { ZipkinExporter } = require('@opentelemetry/exporter-zipkin');
+
+const { TraceBridge } = require('../');
+
+const HELP = `
+DESCRIPTION:
+  Description.
+`;
+
+program
+  .description("Bridge tracing data to Zipkin")
+  .option('-d, --debug')
+  .on('--help', () => console.log(HELP))
+  .action(bridge)
+  .parse(process.argv);
+
+function bridge(options) {
+  const tracer = init(options);
+
+  let bridge = new TraceBridge;
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    terminal: false,
+  });
+
+  rl.on('line', (line) => {
+    bridge.process(JSON.parse(line), (trace) => {
+      if (!trace.kv)
+        return trace;
+      const kv = Object.entries(trace.kv).map((pair) => {
+        return `${pair[0]} = ${JSON.stringify(pair[1])}`;
+      }).join(', ');
+      return {
+        nm: `${trace.nm}: ${kv}`,
+        ts: trace.ts,
+      };
+    });
+  });
+}
+
+function init(options) {
+  const exporter = new ZipkinExporter({
+    serviceName: 'mirakc',
+  });
+
+  const provider = new BasicTracerProvider({
+    traceParams: {
+      numberOfEventsPerSpan: Number.MAX_SAFE_INTEGER
+    }
+  });
+
+  provider.addSpanProcessor(new SimpleSpanProcessor(exporter));
+
+  if (options.debug) {
+    provider.addSpanProcessor(
+      new SimpleSpanProcessor(new ConsoleSpanExporter()));
+  }
+
+  provider.register();
+}

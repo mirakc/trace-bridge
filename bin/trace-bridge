@@ -1,0 +1,18 @@
+#!/usr/bin/env node
+
+"use strict";
+
+const program = require('commander');
+
+const PKG = require('../package.json');
+
+program
+  .version(PKG.version)
+  .description(PKG.description)
+  .command(
+    'jaeger',
+    'Bridge tracing data to Jaeger')
+  .command(
+    'zipkin',
+    'Bridge tracing data to Zipkin')
+  .parse(process.argv);

@@ -1,0 +1,23 @@
+{
+  "name": "@mirakc/trace-bridge",
+  "version": "0.1.0",
+  "description": "Bridge tracing data from mirakc",
+  "bin": {
+    "trace-bridge": "bin/trace-bridge"
+  },
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "(Apache-2.0 OR MIT)",
+  "private": true,
+  "dependencies": {
+    "@opentelemetry/api": "^0.6.0",
+    "@opentelemetry/exporter-jaeger": "^0.6.0",
+    "@opentelemetry/exporter-zipkin": "^0.6.0",
+    "@opentelemetry/tracing": "^0.6.0",
+    "commander": "^5.0.0",
+    "stream-to-string": "^1.2.0"
+  }
+}
